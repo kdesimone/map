@@ -1,0 +1,11 @@
+.DS_Store
+*.so
+*.c
+*.pyc
+*.m~
+.coverage
+
+build
+_build
+_static
+_templates
