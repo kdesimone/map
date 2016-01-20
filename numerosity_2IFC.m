@@ -237,7 +237,7 @@ catch
 end
 
 % Write data to file
-if strcmp(p.subject, 'test')
+if ~strcmp(p.subject, 'test')
     filename = sprintf('numerosity_2IFC-%s-%s-%s', p.subject, p.block, datestr(p.tim,30));
     save(filename, 'p');  % save data
 end
