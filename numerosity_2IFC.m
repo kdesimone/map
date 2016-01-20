@@ -6,18 +6,19 @@ clear all; clc
 % get subject, block, and time now
 p.subject = num2str(input('Enter subject number: '));
 p.block = num2str(input('Enter block number: '));
-p.timestamp = GetSecs;
-
-% set the random seed generator based on this
-p.seed = sum(p.subject + p.block + p.timestamp);
-rng(p.seed);
+p.tim=fix(clock);
 
 % debug mode
 if isempty(p.subject)
     p.subject = 'test';
     p.block = 'test';
+    p.tim = [2016 1 18 01 02 03];
     Screen('Preference', 'SkipSyncTests', 1);
 end
+
+% set the random seed generator based on this
+p.seed = sum(p.subject + p.block + sum(p.tim));
+rng(p.seed);
 
 % splash
 HideCursor;
@@ -38,9 +39,9 @@ p.bg = (p.white + p.black) / 2;
 % numerosity parameters
 p.range = 0.30; % max +/- difference between intervals
 p.ndots = 50; % int
-p.density = round(8 * p.ppd); % degrees, radius of disk
-p.area = round(0.30 * p.ppd); % degrees, radius of each dot
-p.min_density = p.density - log(p.density * p.range); 
+p.density = 8 * p.ppd; % degrees, radius of disk
+p.area = 0.05 * p.ppd; % degrees, radius of each dot
+p.min_density = p.density - log(p.density * p.range);
 p.max_density = p.density + log(p.density * p.range);
 p.min_area = p.area - log(p.area * p.range);
 p.max_area = p.area + log(p.area * p.range);
@@ -56,19 +57,20 @@ p.d_tex = Screen('MakeTexture', w, p.d_rgba);
 p.d_rect = [p.xc - dx/2, p.yc - dy/2, p.xc + dx/2, p.yc + dy/2];
 
 % trials parameters
-p.ntrials = 300;
+p.ntrials = 300*34;
 p.cointoss = rand(p.ntrials,1); % cointoss to determine interval order
-time.iti = [1,2]; % intertrial interval, seconds
-time.iii = 0.250; % interinterval interval,
-time.stim_time = 0.250;
+time.iti = [0.05,0.1]; % intertrial interval, seconds
+time.iii = 0.05; % interinterval interval,
+time.stim_time = 0.05;
 p.interval_order = NaN(p.ntrials,2);
+p.densities = NaN(p.ntrials,1);
+p.areas = NaN(p.ntrials,1);
 
 % behavioral
 r.response = NaN(p.ntrials,1);
-r.actual = NaN(p.ntrials,1);
 r.rtime = NaN(p.ntrials,1);
-key(1) = KbName('s'); % s = less numerous
-key(2) = KbName('d'); % d = more numerous
+key(1) = KbName('a'); % s = less numerous
+key(2) = KbName('s'); % d = more numerous
 
 % define fixation point
 dfp = @(w,c,s,xc,yc) Screen(w, 'FillRect', c, repmat([xc; yc],[2 3]) + [-1 -1 1 1]' * s);
@@ -98,12 +100,21 @@ for trial = 1:p.ntrials
     
     % reference dot array
     ref_d = dotframe(p.ndots, p.area, p.density, p.dispsize);
-    ref_d = repmat(ref_d * p.white(1), [1 1 4]);    
+    ref_d = repmat(ref_d * p.white(1), [1 1 4]);
     
-    % texture
-    textures(1,trial) = Screen('MakeTexture', w, ref_d);
-    textures(2,trial) = Screen('MakeTexture', w, test_d);
-
+    % interval order
+    itex_1 = 2-(p.cointoss(trial)>0.5);
+    itex_2 = 3-itex_1;
+    
+    % make textures
+    %textures(itex_1,trial) = Screen('MakeTexture', w, ref_d);
+    %textures(itex_2,trial) = Screen('MakeTexture', w, test_d);
+    
+    % record trial info
+    p.densities(trial) = density;
+    p.areas(trial) = area;
+    p.interval_order(trial,:) = [itex_1,itex_2];
+    
 end
 
 % Instructions
@@ -143,12 +154,8 @@ try
         time.trial_start = GetSecs;
         
         % textures
-        t(1) = p.d_tex;
-        t(2) = textures(trial);
-        
-        % interval order
-        itex_1 = 2-p.cointoss(trial)>0.5;
-        itex_2 = 3-itex_1;
+        t(1) = textures(1,trial);
+        t(2) = textures(2,trial);
         
         % Draw interval 1
         Screen('FillRect', w, p.bg, rect);
@@ -216,9 +223,6 @@ try
             WaitSecs(0.001);
         end
         
-        % record interval order
-        p.interval_order(trial,:) = [itex_1,itex_2];
-        
     end
     
     Screen('CloseAll');
@@ -230,6 +234,12 @@ catch
     ShowCursor;
     rethrow(lasterror);
     ListenChar;
+end
+
+% Write data to file
+if strcmp(p.subject, 'test')
+    filename = sprintf('numerosity_2IFC-%s-%s-%s', p.subject, p.block, datestr(p.tim,30));
+    save(filename, 'p');  % save data
 end
 
 
