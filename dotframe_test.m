@@ -19,7 +19,7 @@ p.min_density = p.density - log(p.density * p.range);
 p.max_density = p.density + log(p.density * p.range);
 p.min_area = p.area - log(p.area * p.range);
 p.max_area = p.area + log(p.area * p.range);
-p.dispsize = p.max_density * 2; % degrees
+p.dispsize = ceil(p.max_density * 2); % degrees
 
 p.ntrials = 300*34;
 p.densities = NaN(p.ntrials,1);
