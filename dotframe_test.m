@@ -33,10 +33,10 @@ for trial = 1:p.ntrials
     area = p.min_area + (p.max_area-p.min_area).*rand(1,1);
     
     % test dot array
-    test_d = dotframe(p.ndots, area, density, p.dispsize);
+    test_d = dotframe(p.ndots, area, density, p.dispsize+2);
     
     % reference dot array
-    ref_d = dotframe(p.ndots, p.area, p.density, p.dispsize);
+    ref_d = dotframe(p.ndots, p.area, p.density, p.dispsize+2);
     
     p.densities(trial) = density;
     p.areas(trial) = area;
