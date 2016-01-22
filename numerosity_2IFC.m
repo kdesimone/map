@@ -35,32 +35,25 @@ p.ppd = pi*p.xpixels/atan(p.screen_width/p.viewing_distance/2.0)/360.0;
 p.white = [255 255 255];
 p.black = [0 0 0];
 p.bg = (p.white + p.black) / 2;
+texrect = NaN(2,4);
 
 % numerosity parameters
 p.range = 0.30; % max +/- difference between intervals
-p.ndots = 50; % int
+p.ndots_ref = 40; % int
+p.ndots_test = 60;
 p.density = 8 * p.ppd; % degrees, radius of disk
-p.area = 0.05 * p.ppd; % degrees, radius of each dot
+p.area = 0.30 * p.ppd; % degrees, radius of each dot
 p.min_density = p.density - log(p.density * p.range);
 p.max_density = p.density + log(p.density * p.range);
 p.min_area = p.area - log(p.area * p.range);
 p.max_area = p.area + log(p.area * p.range);
-p.dispsize = ceil(p.max_density * 2); % degrees
-
-% the reference interval
-p.d = dotframe(p.ndots, p.area, p.density, p.dispsize);
-p.d_rgba = repmat(p.d * p.white(1), [1 1 4]);
-p.d_tex = Screen('MakeTexture', w, p.d_rgba);
-
-% rect of display
-[dx,dy] = size(p.d(:,:,1));
-p.d_rect = [p.xc - dx/2, p.yc - dy/2, p.xc + dx/2, p.yc + dy/2];
+p.dispsize = ceil(p.max_density * 2) + 2;
 
 % trials parameters
-p.ntrials = 300*34;
+p.ntrials = 10;
 p.cointoss = rand(p.ntrials,1); % cointoss to determine interval order
-time.iti = [0.05,0.1]; % intertrial interval, seconds
-time.iii = 0.05; % interinterval interval,
+time.iti = [0.250,0.500]; % intertrial interval, seconds
+time.iii = 0.250; % interinterval interval,
 time.stim_time = 0.05;
 p.interval_order = NaN(p.ntrials,2);
 p.densities = NaN(p.ntrials,1);
@@ -75,47 +68,6 @@ key(2) = KbName('s'); % d = more numerous
 % define fixation point
 dfp = @(w,c,s,xc,yc) Screen(w, 'FillRect', c, repmat([xc; yc],[2 3]) + [-1 -1 1 1]' * s);
 fixation_point = @(n) dfp(w,[p.white' p.black' p.white'],[3 2 1], p.xc, p.yc);
-
-% splash screen
-Screen('FillRect', w, p.bg);
-Screen('TextSize', w, 24);
-txt = 'Please wait, generating stimuli....';
-normBoundsRect = Screen('TextBounds', w, txt);
-txtloc = [p.xc - normBoundsRect(3)/2, p.yc + normBoundsRect(4)/2];
-Screen('DrawText', w, txt, txtloc(1), txtloc(2), p.white);
-Screen('Flip', w);
-Priority(MaxPriority(w));
-
-% build textures
-textures = zeros(2, p.ntrials);
-for trial = 1:p.ntrials
-    
-    % random density & area
-    density = p.min_density + (p.max_density-p.min_density).*rand(1,1);
-    area = p.min_area + (p.max_area-p.min_area).*rand(1,1);
-    
-    % test dot array
-    test_d = dotframe(p.ndots, area, density, p.dispsize);
-    test_d = repmat(test_d * p.white(1), [1 1 4]);
-    
-    % reference dot array
-    ref_d = dotframe(p.ndots, p.area, p.density, p.dispsize);
-    ref_d = repmat(ref_d * p.white(1), [1 1 4]);
-    
-    % interval order
-    itex_1 = 2-(p.cointoss(trial)>0.5);
-    itex_2 = 3-itex_1;
-    
-    % make textures
-    %textures(itex_1,trial) = Screen('MakeTexture', w, ref_d);
-    %textures(itex_2,trial) = Screen('MakeTexture', w, test_d);
-    
-    % record trial info
-    p.densities(trial) = density;
-    p.areas(trial) = area;
-    p.interval_order(trial,:) = [itex_1,itex_2];
-    
-end
 
 % Instructions
 Screen('FillRect', w, p.bg);
@@ -146,25 +98,53 @@ try
         % inter-trial break
         time.iti_start = GetSecs;
         iti = time.iti(1) + (time.iti(2)-time.iti(1)).*rand(1,1);
-        while GetSecs - time.iti_start < iti
-            do=0;
-        end
         
         % new trial
         time.trial_start = GetSecs;
         
-        % textures
-        t(1) = textures(1,trial);
-        t(2) = textures(2,trial);
+        % random density & area
+        density = p.min_density + (p.max_density-p.min_density).*rand(1,1);
+        area = p.min_area + (p.max_area-p.min_area).*rand(1,1);
+        
+        % test dot array
+        test_d = dotframe(p.ndots_test, area, density, p.dispsize);
+        test_d = repmat(test_d * p.white(1), [1 1 4]);
+        
+        % reference dot array
+        ref_d = dotframe(p.ndots_ref, p.area, p.density, p.dispsize);
+        ref_d = repmat(ref_d * p.white(1), [1 1 4]);
+        
+        % make textures
+        t(1) = Screen('MakeTexture', w, ref_d);
+        t(2) = Screen('MakeTexture', w, test_d);
+        
+        % record dot numbers
+        d(1) = p.ndots_ref;
+        d(2) = p.ndots_test;
+        
+        % define texture rects
+        [dx,dy] = size(ref_d(:,:,1));
+        texrect(1,:) = [p.xc - dx/2, p.yc - dy/2, p.xc + dx/2, p.yc + dy/2];
+        [dx,dy] = size(test_d(:,:,1));
+        texrect(2,:) = [p.xc - dx/2, p.yc - dy/2, p.xc + dx/2, p.yc + dy/2];
+        
+        % Wait for the rest of the iti
+        while GetSecs - time.iti_start < iti
+            do=0;
+        end
+         
+        % determine interval order
+        int1 = 2-(p.cointoss(trial)>0.5);
+        int2 = 3-int1;
         
         % Draw interval 1
         Screen('FillRect', w, p.bg, rect);
         Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, [1 1 1 1]);
-        Screen('DrawTexture', w, t(itex_1), [], p.d_rect);
+        Screen('DrawTexture', w, t(int1), [], texrect(int1,:));
         fixation_point();
         [vbl, interval_1_onset] = Screen('Flip', w);
         
-        % And wait
+        % Wait for the rest of the iii
         while GetSecs - interval_1_onset < time.stim_time
             do=0;
         end
@@ -182,7 +162,7 @@ try
         % Draw interval 2
         Screen('FillRect', w, p.bg, rect);
         Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, [1 1 1 1]);
-        Screen('DrawTexture', w, t(itex_2), [], p.d_rect);
+        Screen('DrawTexture', w, t(int2), [], texrect(int2,:));
         fixation_point();
         [vbl, interval_2_onset] = Screen('Flip', w);
         
@@ -223,6 +203,24 @@ try
             WaitSecs(0.001);
         end
         
+        % record trial
+        p.all_ndots_ref(trial) = p.ndots_ref;
+        p.all_ndots_test(trial) = p.ndots_test;
+        p.densities(trial) = density;
+        p.areas(trial) = area;
+        p.interval_order(trial,:) = [int1,int2];
+        
+        % correct response
+        correct = find([int1,int2]==2);
+        
+        % update staircase
+        if p.response(trial) == correct
+            p.ndots_test = p.ndots_test - 2;
+            p.performance(trial) = 1;
+        else
+            p.ndots_test = p.ndots_test + 1;
+            p.performance(trial) = 0;
+        end
     end
     
     Screen('CloseAll');
