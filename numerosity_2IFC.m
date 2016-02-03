@@ -26,7 +26,7 @@ HideCursor;
 
 % display parameters
 p.viewing_distance = 50; % cm
-p.screen_width = 50; % cm
+p.screen_width = 30; % cm
 p.xpixels = rect(3);
 p.ypixels = rect(4);
 p.xc = p.xpixels/2;
@@ -37,33 +37,34 @@ p.black = [0 0 0];
 p.bg = (p.white + p.black) / 2;
 texrect = NaN(2,4);
 
-% numerosity parameters
-p.range = 0.30; % max +/- difference between intervals
-p.ndots_ref = 40; % int
-p.ndots_test = 60;
-p.density = 8 * p.ppd; % degrees, radius of disk
-p.area = 0.30 * p.ppd; % degrees, radius of each dot
-p.min_density = p.density - log(p.density * p.range);
-p.max_density = p.density + log(p.density * p.range);
-p.min_area = p.area - log(p.area * p.range);
-p.max_area = p.area + log(p.area * p.range);
-p.dispsize = ceil(p.max_density * 2) + 2;
+% set some parameters
+ntrials = 10;
+p.dispsize = 10 * p.ppd;
+p.dotradius = 0.25 * p.ppd;
+p.radius = 5 * p.ppd;
+nfix = 40;           % number of elements in fixed stimulus
+afix = pi*4^2;       % area of fixed stimulus (deg^2)
+ninit = 4;           % initialization; number of elements by which the
+% other stimulus differs from the fixed stimulus,
+% at the beginning of the experiment
+arange = 2;          % factor by which we will randomly tweak the area of
+% the other stimulus up or down
 
-% trials parameters
-p.ntrials = 10;
-p.cointoss = rand(p.ntrials,1); % cointoss to determine interval order
-time.iti = [0.250,0.500]; % intertrial interval, seconds
-time.iii = 0.250; % interinterval interval,
-time.stim_time = 0.05;
-p.interval_order = NaN(p.ntrials,2);
-p.densities = NaN(p.ntrials,1);
-p.areas = NaN(p.ntrials,1);
+% initialize staircases
+src = tsource( 'init', nfix, afix, ninit, arange );
+
+% initialize trial storage
+p.sources = cell(ntrials,1);
 
 % behavioral
-r.response = NaN(p.ntrials,1);
-r.rtime = NaN(p.ntrials,1);
 key(1) = KbName('a'); % s = less numerous
 key(2) = KbName('s'); % d = more numerous
+
+% timing
+time.iti(1) = 0.5; % shorest iti
+time.iti(2) = 1.0; % longest iti
+time.stim_duration = 0.250; % stimulus exposure in seconds
+time.iii = 0.250; % interinterval interval
 
 % define fixation point
 dfp = @(w,c,s,xc,yc) Screen(w, 'FillRect', c, repmat([xc; yc],[2 3]) + [-1 -1 1 1]' * s);
@@ -93,7 +94,7 @@ try
     time.block_start = GetSecs;
     
     % Main loop
-    for trial = 1:p.ntrials
+    for trial = 1:ntrials
         
         % inter-trial break
         time.iti_start = GetSecs;
@@ -102,50 +103,41 @@ try
         % new trial
         time.trial_start = GetSecs;
         
-        % random density & area
-        density = p.min_density + (p.max_density-p.min_density).*rand(1,1);
-        area = p.min_area + (p.max_area-p.min_area).*rand(1,1);
+        % get the trial source
+        [ src, stim1, stim2 ] = tsource( 'get', src );
         
-        % test dot array
-        test_d = dotframe(p.ndots_test, area, density, p.dispsize);
-        test_d = repmat(test_d * p.white(1), [1 1 4]);
+        % construct dot arrays
+        stim1_df = dotframe(stim1.n, p.dotradius, p.radius, p.dispsize);
+        stim2_df = dotframe(stim2.n, p.dotradius, p.radius, p.dispsize);
         
-        % reference dot array
-        ref_d = dotframe(p.ndots_ref, p.area, p.density, p.dispsize);
-        ref_d = repmat(ref_d * p.white(1), [1 1 4]);
+        % construct RGBA arrays
+        stim1_rgba = repmat(stim1_df * p.white(1), [1 1 4]);
+        stim2_rgba = repmat(stim2_df * p.white(1), [1 1 4]);
         
         % make textures
-        t(1) = Screen('MakeTexture', w, ref_d);
-        t(2) = Screen('MakeTexture', w, test_d);
-        
-        % record dot numbers
-        d(1) = p.ndots_ref;
-        d(2) = p.ndots_test;
+        t(1) = Screen('MakeTexture', w, stim1_rgba);
+        t(2) = Screen('MakeTexture', w, stim2_rgba);
         
         % define texture rects
-        [dx,dy] = size(ref_d(:,:,1));
+        [dx,dy] = size(stim1_df(:,:,1));
         texrect(1,:) = [p.xc - dx/2, p.yc - dy/2, p.xc + dx/2, p.yc + dy/2];
-        [dx,dy] = size(test_d(:,:,1));
+        [dx,dy] = size(stim1_df(:,:,1));
         texrect(2,:) = [p.xc - dx/2, p.yc - dy/2, p.xc + dx/2, p.yc + dy/2];
         
         % Wait for the rest of the iti
         while GetSecs - time.iti_start < iti
             do=0;
         end
-         
-        % determine interval order
-        int1 = 2-(p.cointoss(trial)>0.5);
-        int2 = 3-int1;
         
         % Draw interval 1
         Screen('FillRect', w, p.bg, rect);
         Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, [1 1 1 1]);
-        Screen('DrawTexture', w, t(int1), [], texrect(int1,:));
+        Screen('DrawTexture', w, t(1), [], texrect(1,:));
         fixation_point();
         [vbl, interval_1_onset] = Screen('Flip', w);
         
-        % Wait for the rest of the iii
-        while GetSecs - interval_1_onset < time.stim_time
+        % Wait for stimulus duration
+        while GetSecs - interval_1_onset < time.stim_duration
             do=0;
         end
         
@@ -154,7 +146,7 @@ try
         fixation_point();
         [vbl, interval_1_offset] = Screen('Flip', w);
         
-        % Wait for some time
+        % Wait for the intertrial interval
         while GetSecs - interval_1_offset < time.iii
             do=0;
         end
@@ -162,12 +154,12 @@ try
         % Draw interval 2
         Screen('FillRect', w, p.bg, rect);
         Screen('BlendFunction', w, GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, [1 1 1 1]);
-        Screen('DrawTexture', w, t(int2), [], texrect(int2,:));
+        Screen('DrawTexture', w, t(2), [], texrect(1,:));
         fixation_point();
         [vbl, interval_2_onset] = Screen('Flip', w);
         
         % And wait
-        while GetSecs - interval_2_onset < time.stim_time
+        while GetSecs - interval_2_onset < time.stim_duration
             do=0;
         end
         
@@ -177,21 +169,22 @@ try
         [vbl, interval_2_offset] = Screen('Flip', w);
         
         % Behavioral
-        keydown = zeros(1,2);
-        while(~xor(keydown(1), keydown(2)))  % wait for one (but not both) response keys to be pressed
+        kd = zeros(1,2);
+        while(~xor(kd(1), kd(2)))  % wait for one (but not both) response keys to be pressed
             [keyisdown, secs, keycode] = KbCheck;
             for ik = 1:2
-                keydown(ik) = keycode(key(ik));
+                kd(ik) = keycode(key(ik));
             end
             
-            WaitSecs(0.001);    % wait for 1 ms to avoid overloading CPU
+            WaitSecs(0.001); % wait for 1 ms to avoid overloading CPU
         end
         
-        % record response
-        if keydown(1)
-            p.response(trial) = 1;
+        % get performance
+        if kd(1) && stim1.n > stim2.n || kd(2) && stim1.n < stim2.n
+            
+            correct = 1;
         else
-            p.response(trial) = 2;
+            correct = 0;
         end
         
         % reaction time
@@ -203,24 +196,13 @@ try
             WaitSecs(0.001);
         end
         
+        % evaluate trial
+        src = tsource( 'put', src, correct );
+        
         % record trial
-        p.all_ndots_ref(trial) = p.ndots_ref;
-        p.all_ndots_test(trial) = p.ndots_test;
-        p.densities(trial) = density;
-        p.areas(trial) = area;
-        p.interval_order(trial,:) = [int1,int2];
+        p.sources{trial} = src;
+
         
-        % correct response
-        correct = find([int1,int2]==2);
-        
-        % update staircase
-        if p.response(trial) == correct
-            p.ndots_test = p.ndots_test - 2;
-            p.performance(trial) = 1;
-        else
-            p.ndots_test = p.ndots_test + 1;
-            p.performance(trial) = 0;
-        end
     end
     
     Screen('CloseAll');
