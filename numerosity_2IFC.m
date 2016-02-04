@@ -50,11 +50,14 @@ ninit = 4;           % initialization; number of elements by which the
 arange = 2;          % factor by which we will randomly tweak the area of
 % the other stimulus up or down
 
-% initialize staircases
-src = tsource( 'init', nfix, afix, ninit, arange );
+% initialize three staircases
+src{1} = tsource( 'init', nfix, 0.5*afix, ninit, arange );
+src{2} = tsource( 'init', nfix,     afix, ninit, arange );
+src{3} = tsource( 'init', nfix, 2.0*afix, ninit, arange );
 
 % initialize trial storage
 p.sources = cell(ntrials,1);
+p.ks = zeros(ntrials,1);
 
 % behavioral
 key(1) = KbName('a'); % s = less numerous
@@ -104,8 +107,12 @@ try
         time.trial_start = GetSecs;
         
         % get the trial source
-        [ src, stim1, stim2 ] = tsource( 'get', src );
-        
+        k = ceil(3*rand);
+        p.ks(trial) = k;
+
+        % get stimulus parameters for a trial
+        [ src{k}, stim1, stim2 ] = tsource( 'get', src{k} );
+    
         % construct dot arrays
         stim1_df = dotframe(stim1.n, p.dotradius, p.radius, p.dispsize);
         stim2_df = dotframe(stim2.n, p.dotradius, p.radius, p.dispsize);
@@ -188,7 +195,7 @@ try
         end
         
         % reaction time
-        p.rtime(trial) = secs - interval_2_offset;
+        p.rtime(trial) = secs - interval_2_offset;`
         
         % wait for depress
         while(keyisdown)
@@ -197,10 +204,10 @@ try
         end
         
         % evaluate trial
-        src = tsource( 'put', src, correct );
+        src{k} = tsource( 'put', src{k}, correct );
         
         % record trial
-        p.sources{trial} = src;
+        p.sources{trial} = src{k};
 
         
     end
