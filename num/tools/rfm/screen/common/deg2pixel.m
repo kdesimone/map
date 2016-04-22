@@ -1,0 +1,1 @@
+function pixel = deg2pixel( deg, roundflag )% DEG2PIXEL  Convert degrees to pixels%% pixel = deg2pixel( deg, roundflag )% 16-Jul-98 -- created (RFM)% set default argumentsdefarg('roundflag',1);pixel=deg*getconfig('pixelperdeg');if roundflag,	pixel=round(pixel);endreturn

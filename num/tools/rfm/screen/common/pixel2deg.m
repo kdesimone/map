@@ -1,0 +1,1 @@
+function deg = pixel2degl( pixel )% PIXEL2DEG  Convert pixels to degrees%% deg = pixel2degl( pixel )% 16-Jul-98 -- created (RFM)deg=pixel/getconfig('pixelperdeg');return

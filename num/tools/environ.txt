@@ -1,0 +1,16 @@
+
+machine='mlab01';
+defaultmonitor='mlab01builtin';
+viewdistance=0.57;
+
+m.name='mlab01builtin'; m.mode='native32b'; m.caldate='08-Feb-2016 16:05:16'; m.screennum=0; m.screensize=[1920 1080]; m.pixelsize=0.000246; m.framerate=60; m.gamma=[362.607 14.429 2.05 2.223]; 
+
+----- previous calibrations -----
+
+m.name='mlab01builtin'; m.mode='native32b'; m.caldate='06-Jan-2016 13:50:52'; m.screennum=0; m.screensize=[1920 1080]; m.pixelsize=0.0002475; m.framerate=60; m.gamma=[47.65 8.349 2.129 0.169]; 
+
+m.name='mlab01builtin'; m.mode='native32b'; m.caldate='05-Jan-2016 15:16:06'; m.screennum=0; m.screensize=[1920 1080]; m.pixelsize=0.0002475; m.framerate=60; m.gamma=[151.214 10.836 2.096 0.586]; 
+
+m.name='mlab02builtin'; m.mode='native32b'; m.caldate='17-Nov-2015 15:43:52'; m.screennum=0; m.screensize=[1920 1080]; m.pixelsize=0.00025; m.framerate=60; m.gamma=[119.573 8.942 2.134 0.321]; 
+
+m.name='mlab01builtin'; m.mode='native32b'; m.caldate='13-Nov-2014 13:58:50'; m.screennum=1; m.screensize=[1920 1080]; m.pixelsize=0.0002475; m.framerate=60; m.gamma=[107.479 8.688 2.118 0.206]; 
